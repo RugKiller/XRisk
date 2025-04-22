@@ -6,14 +6,25 @@
   "permissions": [
     "scripting",
     "tabs",
-    "storage"
+    "sidePanel"
   ],
   "host_permissions": [
     "*://*.x.com/*",
     "*://*.twitter.com/*"
   ],
-  "action": {},
+  "action": {
+    "default_title": "X用户分析"
+  },
   "background": {
     "service_worker": "background.js"
-  }
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 } 
