@@ -4,7 +4,6 @@
   "version": "1.0",
   "description": "X用户标注",
   "permissions": [
-    "activeTab",
     "scripting",
     "tabs"
   ],
@@ -15,15 +14,5 @@
   "action": {},
   "background": {
     "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.x.com/*",
-        "*://*.twitter.com/*"
-      ],
-      "js": ["content.js"],
-      "run_at": "document_end"
-    }
-  ]
+  }
 } 
