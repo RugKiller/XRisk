@@ -5,7 +5,8 @@
   "description": "X用户标注",
   "permissions": [
     "scripting",
-    "tabs"
+    "tabs",
+    "storage"
   ],
   "host_permissions": [
     "*://*.x.com/*",
