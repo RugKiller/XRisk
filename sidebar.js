@@ -5,13 +5,12 @@ function autoAnalyze() {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         const activeTab = tabs[0];
         if (activeTab && (activeTab.url.includes('x.com/') || activeTab.url.includes('twitter.com/'))) {
-            // 获取用户名并传递给分析函数
             const username = getAndShowUsername(activeTab.url);
             if (username) {
                 chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
                     func: analysisXUser,
-                    args: [username]  // 传递username参数
+                    args: [username]
                 });
             }
         }
@@ -44,43 +43,195 @@ function getAndShowUsername(url) {
     return null;
 }
 
-// 重命名并修改为接收username参数
-function analysisXUser(username) {
-    // 首先检查是否是用户主页
-    const pathParts = window.location.pathname.split('/');
-    if (pathParts.length !== 2 || pathParts[1] === '') {
-        return;
+// API 配置和通用方法
+const API_CONFIG = {
+    PUMP_TOOLS: {
+        BASE_URL: 'https://pumptools.me/api/extension',
+        ENDPOINTS: {
+            TWITTER_TOKENS: '/get_x_tokens_history',
+            TWITTER_MODIFICATIONS: '/get_x_modification_logs'
+        }
+    }
+};
+
+async function makeRequest(endpoint, payload, description) {
+    try {
+        const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
+        console.log(`准备发送${description}请求:`, url, payload);
+
+        payload.user_id = '2cziYKVaXnYx8GQZptAGFokgocu2ck33jvtxDV38kien';
+        console.log('添加user_id后的payload:', payload);
+
+        console.log('开始fetch请求...');
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        console.log('fetch请求完成，状态:', response.status);
+
+        if (response.status === 401 || response.status === 403) {
+            console.log('需要VIP权限');
+            const error = new Error('NeedVip');
+            error.status = response.status;
+            error.emptyData = { data: [] };
+            throw error;
+        }
+
+        if (!response.ok) {
+            console.log('请求失败，状态码:', response.status);
+            return { data: [] };
+        }
+
+        console.log('开始解析响应数据...');
+        const result = await response.json();
+        console.log(`${description}响应数据:`, result);
+        return result;
+    } catch (error) {
+        console.error(`${description}请求出错:`, error);
+        console.error('错误详情:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+        if (error.message === 'NeedVip') {
+            throw error;
+        }
+        return { data: [] };
+    }
+}
+
+// 修改后的分析函数
+async function analysisXUser(username) {
+    console.log('==== 开始分析用户 ====');
+    console.log('用户名:', username);
+
+    // 在函数内部定义所需的配置和函数
+    const API_CONFIG = {
+        PUMP_TOOLS: {
+            BASE_URL: 'https://pumptools.me/api/extension',
+            ENDPOINTS: {
+                TWITTER_TOKENS: '/get_x_tokens_history',
+                TWITTER_MODIFICATIONS: '/get_x_modification_logs'
+            }
+        }
+    };
+
+    async function makeRequest(endpoint, payload, description) {
+        try {
+            const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
+            console.log(`准备发送${description}请求:`, url, payload);
+
+            payload.user_id = '2cziYKVaXnYx8GQZptAGFokgocu2ck33jvtxDV38kien';
+            console.log('添加user_id后的payload:', payload);
+
+            console.log('开始fetch请求...');
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyY3ppWUtWYVhuWXg4R1FacHRBR0Zva2dvY3UyY2szM2p2dHhEVjM4a2llbiIsImV4cCI6MTc0NTM4ODgxNn0.By9JE6yw0FGuO2718H_MTT0a2OR84TZEsGGQxf3YdVQ'
+                },
+                body: JSON.stringify(payload)
+            });
+            console.log('fetch请求完成，状态:', response.status);
+
+            if (response.status === 401 || response.status === 403) {
+                console.log('需要VIP权限');
+                const error = new Error('NeedVip');
+                error.status = response.status;
+                error.emptyData = { data: [] };
+                throw error;
+            }
+
+            if (!response.ok) {
+                console.log('请求失败，状态码:', response.status);
+                return { data: [] };
+            }
+
+            console.log('开始解析响应数据...');
+            const result = await response.json();
+            console.log(`${description}响应数据:`, result);
+            return result;
+        } catch (error) {
+            console.error(`${description}请求出错:`, error);
+            console.error('错误详情:', {
+                name: error.name,
+                message: error.message,
+                stack: error.stack
+            });
+            if (error.message === 'NeedVip') {
+                throw error;
+            }
+            return { data: [] };
+        }
     }
 
-    console.log('Starting analysis for user:', username);
-    const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div/div[2]/div[1]/div/div/div[1]/div/div/span';
-    console.log('Looking for element with XPath:', xpath);
+    // 构造Twitter URL
+    const twitterUrl = `https://x.com/${username}`;
+    console.log('构造的URL:', twitterUrl);
+    const payload = { twitter_url: twitterUrl };
+    console.log('请求参数:', payload);
 
+    console.log('准备调用API...');
+    // 调用两个接口
+    const tokensResult = await makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史');
+    console.log('发币历史数据:', tokensResult);
+
+    const modificationsResult = await makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史');
+    console.log('异常修改历史数据:', modificationsResult);
+
+    console.log('准备修改DOM...');
+    const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div/div[2]/div[1]/div/div/div[1]/div/div/span';
+    console.log('使用XPath:', xpath);
+    
     const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
     const element = result.singleNodeValue;
+    console.log('找到的DOM元素:', element);
     
     if (element) {
-        console.log('Target element found');
-        
+        console.log('开始更新DOM...');
         // 如果已经添加过，先移除
         const existing = element.querySelector('.x-added-username');
+        console.log('existing is:', existing);
         if (existing) {
-            console.log('Removing existing modification');
+            console.log('移除已存在的标注');
             existing.remove();
         }
         
-        // 添加新的标注，使用传入的username
+        console.log('准备创建新span...');
         const newSpan = document.createElement('span');
-        newSpan.className = 'css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-poiln3 x-added-username';
-        newSpan.textContent = username;  // 使用传入的username
-        newSpan.style.color = '#1DA1F2';
-        newSpan.style.marginLeft = '4px';
+        console.log('span已创建');
         
-        element.appendChild(newSpan);
-        console.log('Analysis completed for user:', username);
+        console.log('设置className...');
+        newSpan.className = 'css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-poiln3 x-added-username';
+        
+        try {
+            console.log('设置文本内容...');
+            const tokenCount = tokensResult.length || 0;
+            
+            // 统计各种修改类型的次数
+            const deleteTweetCount = modificationsResult.filter(m => m.modify_type === 'delete_tweet').length;
+            const changeNameCount = modificationsResult.filter(m => m.modify_type === 'modify_user_name').length;
+            const changeAvatarCount = modificationsResult.filter(m => m.modify_type === 'modify_profile_image').length;
+            
+            newSpan.textContent = `发币: ${tokenCount}个, 删推: ${deleteTweetCount}次, 改名: ${changeNameCount}次, 改头像: ${changeAvatarCount}次`;
+            
+            console.log('设置样式...');
+            newSpan.style.color = '#1DA1F2';
+            newSpan.style.marginLeft = '4px';
+            
+            console.log('准备添加到DOM...');
+            element.appendChild(newSpan);
+            console.log('添加的内容:', newSpan.textContent);
+        } catch (error) {
+            console.error('DOM更新出错:', error);
+        }
     } else {
-        console.log('Target element not found');
+        console.warn('未找到目标DOM元素');
     }
+
+    console.log('==== 分析完成 ====');
 }
 
 // 监听标签页更新
