@@ -113,7 +113,8 @@ async function analysisXUser(username) {
             BASE_URL: 'https://pumptools.me/api/extension',
             ENDPOINTS: {
                 TWITTER_TOKENS: '/get_x_tokens_history',
-                TWITTER_MODIFICATIONS: '/get_x_modification_logs'
+                TWITTER_MODIFICATIONS: '/get_x_modification_logs',
+                TWITTER_INFLUENCE: '/get_x_influence'
             }
         }
     };
@@ -170,60 +171,36 @@ async function analysisXUser(username) {
     const payload = { twitter_url: twitterUrl };
     console.log('请求参数:', payload);
 
-    console.log('准备调用API...');
-    // 调用两个接口
-    const tokensResult = await makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史');
+    console.log('准备并行调用API...');
+    // 并行调用三个接口
+    const [tokensResult, modificationsResult, influenceResult] = await Promise.all([
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史'),
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史'),
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据')
+    ]);
+    
     console.log('发币历史数据:', tokensResult);
-
-    const modificationsResult = await makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史');
     console.log('异常修改历史数据:', modificationsResult);
+    console.log('用户影响力数据:', influenceResult);
 
     console.log('准备修改DOM...');
-    const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div/div[2]/div[1]/div/div/div[1]/div/div/span';
+    const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div[1]/div[2]/div[1]/div/div/div[1]';
     console.log('使用XPath:', xpath);
     
     const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-    const element = result.singleNodeValue;
-    console.log('找到的DOM元素:', element);
+    const targetElement = result.singleNodeValue;
+    console.log('找到的DOM元素:', targetElement);
     
-    if (element) {
+    if (targetElement) {
         console.log('开始更新DOM...');
-        // 如果已经添加过，先移除
-        const existing = element.querySelector('.x-added-username');
-        console.log('existing is:', existing);
-        if (existing) {
-            console.log('移除已存在的标注');
-            existing.remove();
-        }
-        
-        console.log('准备创建新span...');
-        const newSpan = document.createElement('span');
-        console.log('span已创建');
-        
-        console.log('设置className...');
-        newSpan.className = 'css-1jxf684 r-bcqeeo r-1ttztb7 r-qvutc0 r-poiln3 x-added-username';
-        
-        try {
-            console.log('设置文本内容...');
-            const tokenCount = tokensResult.length || 0;
-            
-            // 统计各种修改类型的次数
-            const deleteTweetCount = modificationsResult.filter(m => m.modify_type === 'delete_tweet').length;
-            const changeNameCount = modificationsResult.filter(m => m.modify_type === 'modify_user_name').length;
-            const changeAvatarCount = modificationsResult.filter(m => m.modify_type === 'modify_profile_image').length;
-            
-            newSpan.textContent = `发币: ${tokenCount}个, 删推: ${deleteTweetCount}次, 改名: ${changeNameCount}次, 改头像: ${changeAvatarCount}次`;
-            
-            console.log('设置样式...');
-            newSpan.style.color = '#1DA1F2';
-            newSpan.style.marginLeft = '4px';
-            
-            console.log('准备添加到DOM...');
-            element.appendChild(newSpan);
-            console.log('添加的内容:', newSpan.textContent);
-        } catch (error) {
-            console.error('DOM更新出错:', error);
-        }
+        targetElement.insertAdjacentHTML('afterend', `
+            <div style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;">
+                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;">发币风险分析: 发币: ${tokensResult.length || 0}个, 删推: ${modificationsResult.filter(m => m.modify_type === 'delete_tweet').length}次, 改名: ${modificationsResult.filter(m => m.modify_type === 'modify_user_name').length}次, 改头像: ${modificationsResult.filter(m => m.modify_type === 'modify_profile_image').length}次
+影响力分析: 全球KOL关注: ${influenceResult.kolFollow?.globalKolFollowersCount || 0}, 中文区KOL关注: ${influenceResult.kolFollow?.cnKolFollowersCount || 0}, 顶级KOL关注: ${influenceResult.kolFollow?.topKolFollowersCount || 0}
+7天胜率: ${influenceResult.kolTokenMention?.day7?.winRatePct ? (influenceResult.kolTokenMention.day7.winRatePct * 100).toFixed(2) : 'N/A'}%, 30天胜率: ${influenceResult.kolTokenMention?.day30?.winRatePct ? (influenceResult.kolTokenMention.day30.winRatePct * 100).toFixed(2) : 'N/A'}%, 90天胜率: ${influenceResult.kolTokenMention?.day90?.winRatePct ? (influenceResult.kolTokenMention.day90.winRatePct * 100).toFixed(2) : 'N/A'}%</div>
+            </div>
+        `);
+        console.log('新增内容已添加');
     } else {
         console.warn('未找到目标DOM元素');
     }
