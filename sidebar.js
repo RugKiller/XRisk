@@ -43,65 +43,6 @@ function getAndShowUsername(url) {
     return null;
 }
 
-// API 配置和通用方法
-const API_CONFIG = {
-    PUMP_TOOLS: {
-        BASE_URL: 'https://pumptools.me/api/extension',
-        ENDPOINTS: {
-            TWITTER_TOKENS: '/get_x_tokens_history',
-            TWITTER_MODIFICATIONS: '/get_x_modification_logs',
-            TWITTER_INFLUENCE: '/get_x_influence'
-        }
-    }
-};
-
-async function makeRequest(endpoint, payload, description) {
-    try {
-        const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
-        console.log(`准备发送${description}请求:`, url, payload);
-
-        payload.user_id = '2cziYKVaXnYx8GQZptAGFokgocu2ck33jvtxDV38kien';
-        console.log('添加user_id后的payload:', payload);
-
-        console.log('开始fetch请求...');
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        console.log('fetch请求完成，状态:', response.status);
-
-        if (response.status === 401 || response.status === 403) {
-            console.log('需要VIP权限');
-            const error = new Error('NeedVip');
-            error.status = response.status;
-            error.emptyData = { data: [] };
-            throw error;
-        }
-
-        if (!response.ok) {
-            console.log('请求失败，状态码:', response.status);
-            return { data: [] };
-        }
-
-        console.log('开始解析响应数据...');
-        const result = await response.json();
-        console.log(`${description}响应数据:`, result);
-        return result;
-    } catch (error) {
-        console.error(`${description}请求出错:`, error);
-        console.error('错误详情:', {
-            name: error.name,
-            message: error.message,
-            stack: error.stack
-        });
-        if (error.message === 'NeedVip') {
-            throw error;
-        }
-        return { data: [] };
-    }
-}
-
 // 修改后的分析函数
 async function analysisXUser(username) {
     console.log('==== 开始分析用户 ====');
