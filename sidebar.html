@@ -2,36 +2,214 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <title>XRisk</title>
     <style>
         body {
             width: 300px;
             padding: 16px;
-            font-family: Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            color: #0f1419;
+            background-color: #ffffff;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eff3f4;
+        }
+        .logo {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+        .content {
+            flex: 1;
+        }
+        .button-container {
+            position: relative;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        .status-dot {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            transition: background-color 0.3s ease;
         }
         button {
             width: 100%;
-            padding: 8px;
+            padding: 12px 32px 12px 12px;
             background-color: #1DA1F2;
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
-            margin-top: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         button:hover {
             background-color: #1a91da;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(29, 161, 242, 0.2);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+        button.active {
+            background-color: #17BF63;
+        }
+        button.active .status-dot {
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+            animation: pulse 2s infinite;
+        }
+        button.active:hover {
+            background-color: #15ac59;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 4px rgba(255, 255, 255, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+            }
         }
         #username {
-            margin-top: 10px;
-            padding: 8px;
-            background-color: #f0f0f0;
-            border-radius: 4px;
+            margin-top: 12px;
+            padding: 12px;
+            background-color: #f7f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #536471;
+        }
+        .footer {
+            margin-top: auto;
+            padding: 16px;
+            border-top: 1px solid #eff3f4;
+            font-size: 14px;
+            background-color: white;
+            position: sticky;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .footer-label {
+            color: #536471;
+            font-weight: 500;
+        }
+        .footer-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .footer a {
+            color: #1DA1F2;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        .footer a:hover {
+            color: #1a91da;
+        }
+        .footer img {
+            width: 16px;
+            height: 16px;
+            margin-right: 4px;
+        }
+        .version {
+            margin-left: auto;
+            color: #536471;
+            font-size: 12px;
+        }
+        .info-box {
+            margin-top: 16px;
+            padding: 12px;
+            background-color: #f7f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #536471;
+            line-height: 1.5;
+        }
+        .info-box h3 {
+            color: #0f1419;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+        }
+        .info-list {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .info-list li {
+            margin-bottom: 4px;
+        }
+        .info-list li:last-child {
+            margin-bottom: 0;
         }
     </style>
 </head>
 <body>
-    <h2>X用户分析</h2>
-    <button id="analyzeBtn">开启自动分析</button>
+    <div class="header">
+        <h1 class="title">一键开启XRisk，助你真正看清X用户</h1>
+    </div>
+    <div class="content">
+        <div class="button-container">
+            <button id="analyzeBtn">
+                开启自动分析
+                <span class="status-dot"></span>
+            </button>
+        </div>
+        <div class="info-box">
+            <h3>功能说明</h3>
+            <ul class="info-list">
+                <li>开启后自动分析访问的X用户，关闭侧边栏插件也没关系</li>
+                <li>如需关闭功能，请点击上方按钮进行关闭即可</li>
+                <li>实时展示用户发币风险评估</li>
+                <li>提供KOL影响力和胜率分析</li>
+            </ul>
+        </div>
+    </div>
+    <div class="footer">
+        <span class="footer-label">联系我们：</span>
+        <div class="footer-links">
+            <a href="https://pumptools.me" target="_blank">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-6h2v6zm-1-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm5 7h-2v-6h2v6z'/%3E%3C/svg%3E" alt="官网">
+                官网
+            </a>
+            <a href="https://x.com/pumptools_me" target="_blank">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23000000'%3E%3Cpath d='M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z'/%3E%3C/svg%3E" alt="推特">
+                推特
+            </a>
+        </div>
+        <span class="version">v0.0.1</span>
+    </div>
     <script src="sidebar.js"></script>
 </body>
 </html> 

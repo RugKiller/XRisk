@@ -34,7 +34,17 @@ function stopAutoAnalyze() {
 function updateButtonState() {
     const button = document.getElementById('analyzeBtn');
     if (button) {
-        button.textContent = isAutoAnalyzing ? '关闭自动分析' : '开启自动分析';
+        if (isAutoAnalyzing) {
+            button.textContent = '关闭自动分析';
+            button.classList.add('active');
+        } else {
+            button.textContent = '开启自动分析';
+            button.classList.remove('active');
+        }
+        // 重新添加状态指示点
+        const statusDot = document.createElement('span');
+        statusDot.className = 'status-dot';
+        button.appendChild(statusDot);
     }
 }
 

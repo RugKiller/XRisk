@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "X用户标注",
-  "version": "1.0",
-  "description": "X用户标注",
+  "name": "XRisk",
+  "version": "0.0.1",
+  "description": "分析X/Twitter用户的发币风险、影响力和胜率。提供用户行为分析、发币历史和KOL指标，帮助您做出明智决策。",
   "permissions": [
     "scripting",
     "tabs",
@@ -14,13 +14,18 @@
     "*://*.twitter.com/*"
   ],
   "action": {
-    "default_title": "X用户分析"
+    "default_title": "XRisk - X/Twitter用户分析"
   },
   "background": {
     "service_worker": "background.js"
   },
   "side_panel": {
     "default_path": "sidebar.html"
+  },
+  "icons": {
+    "16": "xrisk_logo.png",
+    "48": "xrisk_logo.png",
+    "128": "xrisk_logo.png"
   },
   "web_accessible_resources": [
     {
