@@ -6,7 +6,8 @@
   "permissions": [
     "scripting",
     "tabs",
-    "sidePanel"
+    "sidePanel",
+    "storage"
   ],
   "host_permissions": [
     "*://*.x.com/*",

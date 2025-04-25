@@ -1,21 +1,46 @@
 console.log('Sidebar script starting...');
 
+// 全局变量，用于存储监听器状态
+let isAutoAnalyzing = false;
+
+// 特殊页面黑名单
+const SPECIAL_PAGES = [
+    'home',
+    'explore',
+    'notifications',
+    'messages',
+    'settings',
+    'search',
+    'compose',
+    'i',
+    'login',
+    'signup',
+    'logout',
+    'about',
+    'tos',
+    'privacy',
+    'help',
+    'status',
+    'download',
+    'account',
+    'deactivate',
+    'suspended',
+    'error',
+    '404',
+    '500'
+];
+
+// 初始化状态
+async function initializeState() {
+    const result = await chrome.storage.local.get('isAutoAnalyzing');
+    isAutoAnalyzing = result.isAutoAnalyzing || false;
+    updateButtonState();
+}
+
 // 自动检测并执行分析
 function autoAnalyze() {
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        const activeTab = tabs[0];
-        if (activeTab && (activeTab.url.includes('x.com/') || tab.url.includes('twitter.com/'))) {
-            const username = getAndShowUsername(activeTab.url);
-            if (username) {
-                // 在注入脚本时传递标签页ID
-                chrome.scripting.executeScript({
-                    target: { tabId: activeTab.id },
-                    func: analysisXUser,
-                    args: [username, activeTab.id]
-                });
-            }
-        }
-    });
+    // 不再执行实际的分析，只更新状态
+    console.log('自动分析已开启');
 }
 
 // 解析URL并显示用户名，同时返回用户名
@@ -206,24 +231,57 @@ async function analysisXUser(username, tabId) {
     console.log('==== 分析完成 ====');
 }
 
+// 开启自动分析
+function startAutoAnalyze() {
+    if (!isAutoAnalyzing) {
+        isAutoAnalyzing = true;
+        // 保存状态
+        chrome.storage.local.set({ isAutoAnalyzing: true });
+        // 更新按钮状态
+        updateButtonState();
+        // 通知 background.js 开始监听
+        chrome.runtime.sendMessage({ action: 'startAutoAnalyze' });
+    }
+}
+
+// 关闭自动分析
+function stopAutoAnalyze() {
+    if (isAutoAnalyzing) {
+        isAutoAnalyzing = false;
+        // 保存状态
+        chrome.storage.local.set({ isAutoAnalyzing: false });
+        // 更新按钮状态
+        updateButtonState();
+        // 通知 background.js 停止监听
+        chrome.runtime.sendMessage({ action: 'stopAutoAnalyze' });
+    }
+}
+
+// 更新按钮状态
+function updateButtonState() {
+    const button = document.getElementById('analyzeBtn');
+    if (button) {
+        button.textContent = isAutoAnalyzing ? '关闭自动分析' : '开启自动分析';
+    }
+}
+
 // 保持原有的点击功能
 document.getElementById('analyzeBtn').onclick = () => {
-    console.log('分析按钮被点击');
-    // 先执行一次分析
-    autoAnalyze();
-    // 开启自动监听
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-        if (changeInfo.status === 'complete' && tab.url && (tab.url.includes('x.com/') || tab.url.includes('twitter.com/'))) {
-            console.log('检测到页面更新，触发分析...');
-            autoAnalyze();
-        }
-    });
+    if (isAutoAnalyzing) {
+        stopAutoAnalyze();
+    } else {
+        startAutoAnalyze();
+    }
 };
 
 // 确保在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeSidebar);
+    document.addEventListener('DOMContentLoaded', () => {
+        initializeState();
+        initializeSidebar();
+    });
 } else {
+    initializeState();
     initializeSidebar();
 }
 
