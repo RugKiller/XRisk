@@ -4,13 +4,14 @@ console.log('Sidebar script starting...');
 function autoAnalyze() {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         const activeTab = tabs[0];
-        if (activeTab && (activeTab.url.includes('x.com/') || activeTab.url.includes('twitter.com/'))) {
+        if (activeTab && (activeTab.url.includes('x.com/') || tab.url.includes('twitter.com/'))) {
             const username = getAndShowUsername(activeTab.url);
             if (username) {
+                // 在注入脚本时传递标签页ID
                 chrome.scripting.executeScript({
                     target: { tabId: activeTab.id },
                     func: analysisXUser,
-                    args: [username]
+                    args: [username, activeTab.id]
                 });
             }
         }
@@ -44,7 +45,7 @@ function getAndShowUsername(url) {
 }
 
 // 修改后的分析函数
-async function analysisXUser(username) {
+async function analysisXUser(username, tabId) {
     console.log('==== 开始分析用户 ====');
     console.log('用户名:', username);
 
@@ -205,28 +206,19 @@ async function analysisXUser(username) {
     console.log('==== 分析完成 ====');
 }
 
-// 监听标签页更新
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.status === 'complete' && tab.url && (tab.url.includes('x.com/') || tab.url.includes('twitter.com/'))) {
-        console.log('检测到页面更新，触发分析...');
-        autoAnalyze();
-    }
-});
-
 // 保持原有的点击功能
 document.getElementById('analyzeBtn').onclick = () => {
     console.log('分析按钮被点击');
+    // 先执行一次分析
     autoAnalyze();
+    // 开启自动监听
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+        if (changeInfo.status === 'complete' && tab.url && (tab.url.includes('x.com/') || tab.url.includes('twitter.com/'))) {
+            console.log('检测到页面更新，触发分析...');
+            autoAnalyze();
+        }
+    });
 };
-
-// 确保在扩展加载时执行一次分析
-chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-    const activeTab = tabs[0];
-    if (activeTab && (activeTab.url.includes('x.com/') || activeTab.url.includes('twitter.com/'))) {
-        console.log('扩展初始化，触发分析...');
-        autoAnalyze();
-    }
-});
 
 // 确保在 DOM 加载完成后初始化
 if (document.readyState === 'loading') {
