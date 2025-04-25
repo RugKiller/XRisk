@@ -130,7 +130,7 @@ async function analysisXUser(username) {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyY3ppWUtWYVhuWXg4R1FacHRBR0Zva2dvY3UyY2szM2p2dHhEVjM4a2llbiIsImV4cCI6MTc0NTM4ODgxNn0.By9JE6yw0FGuO2718H_MTT0a2OR84TZEsGGQxf3YdVQ'
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyY3ppWUtWYVhuWXg4R1FacHRBR0Zva2dvY3UyY2szM2p2dHhEVjM4a2llbiIsImV4cCI6MTc0NTQyMDIyN30.LAJai7lkQXZjaGhOaZBu8tiNVLKxfScgP1CbKs4N03E'
                 },
                 body: JSON.stringify(payload)
             });
