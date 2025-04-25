@@ -238,9 +238,11 @@ async function analysisXUser(username, tabId) {
         console.log('开始更新DOM...');
         targetElement.insertAdjacentHTML('afterend', `
             <div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;">
-                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;">发币风险分析: 发币: ${tokenCount}个, 删推: ${deleteTweetCount}次, 改名: ${changeNameCount}次, 改头像: ${changeAvatarCount}次
-影响力分析: 全球KOL关注: ${globalKolCount}, 中文区KOL关注: ${cnKolCount}, 顶级KOL关注: ${topKolCount}
-7天胜率: ${day7WinRate}%, 30天胜率: ${day30WinRate}%, 90天胜率: ${day90WinRate}%</div>
+                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;">
+                    <strong>发币风险分析:</strong> 发币: <span style="color: #ff0000; font-weight: bold;">${tokenCount}</span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
+                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="color: #ff0000; font-weight: bold;">${topKolCount}</span>, 全球KOL关注: <span style="color: #ff0000; font-weight: bold;">${globalKolCount}</span>, 中文区KOL关注: <span style="color: #ff0000; font-weight: bold;">${cnKolCount}</span>, 
+                    <strong>胜率分析:</strong> 7天胜率: <span style="color: #ff0000; font-weight: bold;">${day7WinRate}%</span>, 30天胜率: <span style="color: #ff0000; font-weight: bold;">${day30WinRate}%</span>, 90天胜率: <span style="color: #ff0000; font-weight: bold;">${day90WinRate}%</span>
+                </div>
             </div>
         `);
         console.log('新增内容已添加');
