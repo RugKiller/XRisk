@@ -49,7 +49,8 @@ const API_CONFIG = {
         BASE_URL: 'https://pumptools.me/api/extension',
         ENDPOINTS: {
             TWITTER_TOKENS: '/get_x_tokens_history',
-            TWITTER_MODIFICATIONS: '/get_x_modification_logs'
+            TWITTER_MODIFICATIONS: '/get_x_modification_logs',
+            TWITTER_INFLUENCE: '/get_x_influence'
         }
     }
 };
@@ -122,15 +123,11 @@ async function analysisXUser(username) {
             const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
             console.log(`准备发送${description}请求:`, url, payload);
 
-            payload.user_id = '2cziYKVaXnYx8GQZptAGFokgocu2ck33jvtxDV38kien';
-            console.log('添加user_id后的payload:', payload);
-
             console.log('开始fetch请求...');
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyY3ppWUtWYVhuWXg4R1FacHRBR0Zva2dvY3UyY2szM2p2dHhEVjM4a2llbiIsImV4cCI6MTc0NTQyMDIyN30.LAJai7lkQXZjaGhOaZBu8tiNVLKxfScgP1CbKs4N03E'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
             });
