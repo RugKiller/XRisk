@@ -244,10 +244,11 @@ async function analysisXUser(username, tabId, cachedData) {
         }
 
         // 获取各项数据，使用默认值防止错误
-        const tokenCount = tokensResult?.data?.length || 0;
-        const deleteTweetCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'delete_tweet')?.length || 0;
-        const changeNameCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'modify_user_name')?.length || 0;
-        const changeAvatarCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'modify_profile_image')?.length || 0;
+        const tokenCount = Array.isArray(tokensResult) ? tokensResult.length : (tokensResult?.data?.length || 0);
+        const modifications = Array.isArray(modificationsResult) ? modificationsResult : (modificationsResult?.data || []);
+        const deleteTweetCount = modifications.filter(m => m.modify_type === 'delete_tweet').length;
+        const changeNameCount = modifications.filter(m => m.modify_type === 'modify_user_name').length;
+        const changeAvatarCount = modifications.filter(m => m.modify_type === 'modify_profile_image').length;
         
         const kolFollow = influenceResult?.kolFollow || {};
         const kolTokenMention = influenceResult?.kolTokenMention || {};
@@ -260,16 +261,17 @@ async function analysisXUser(username, tabId, cachedData) {
         const day30WinRate = kolTokenMention?.day30?.winRatePct ? (kolTokenMention.day30.winRatePct * 100).toFixed(2) : 'N/A';
         const day90WinRate = kolTokenMention?.day90?.winRatePct ? (kolTokenMention.day90.winRatePct * 100).toFixed(2) : 'N/A';
 
+        // 准备发币详情提示
+        const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
+        const tokenDetails = tokens.map(token => 
+            `${token.token_symbol || 'Unknown'}: ${token.token_address}\n市值: $${parseFloat(token.market_cap).toFixed(2)}`
+        ).join('\n\n') || '无发币记录';
+
+        console.log('tokenDetails: ', tokenDetails);
         console.log('开始更新DOM...');
-        targetElement.insertAdjacentHTML('afterend', `
-            <div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;">
-                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;">
-                    <strong>发币风险分析:</strong> 发币: <span style="color: #ff0000; font-weight: bold;">${tokenCount}</span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
-                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="color: #ff0000; font-weight: bold;">${topKolCount}</span>, 全球KOL关注: <span style="color: #ff0000; font-weight: bold;">${globalKolCount}</span>, 中文区KOL关注: <span style="color: #ff0000; font-weight: bold;">${cnKolCount}</span>, 
-                    <strong>胜率分析:</strong> 7天胜率: <span style="color: #ff0000; font-weight: bold;">${day7WinRate}%</span>, 30天胜率: <span style="color: #ff0000; font-weight: bold;">${day30WinRate}%</span>, 90天胜率: <span style="color: #ff0000; font-weight: bold;">${day90WinRate}%</span>
-                </div>
-            </div>
-        `);
+        targetElement.insertAdjacentHTML('afterend', `<div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;"><div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;"><strong>发币风险分析:</strong> 发币: <span style="color: #ff0000; font-weight: bold; cursor: help;" title="${tokenDetails.replace(/\n/g, '&#10;')}">${tokenCount}</span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
+<strong>影响力分析:</strong> 顶级KOL关注: <span style="color: #ff0000; font-weight: bold;">${topKolCount}</span>, 全球KOL关注: <span style="color: #ff0000; font-weight: bold;">${globalKolCount}</span>, 中文区KOL关注: <span style="color: #ff0000; font-weight: bold;">${cnKolCount}</span>
+<strong>胜率分析:</strong> 7天胜率: <span style="color: #ff0000; font-weight: bold;">${day7WinRate}%</span>, 30天胜率: <span style="color: #ff0000; font-weight: bold;">${day30WinRate}%</span>, 90天胜率: <span style="color: #ff0000; font-weight: bold;">${day90WinRate}%</span></div></div>`);
         console.log('新增内容已添加');
     }
 

@@ -32,7 +32,7 @@ function stopAutoAnalyze() {
 
 // 更新按钮状态
 function updateButtonState() {
-    const button = document.getElementById('analyzeBtn');
+    const button = document.getElementById('startAutoAnalyze');
     if (button) {
         if (isAutoAnalyzing) {
             button.textContent = '关闭自动分析';
@@ -51,7 +51,7 @@ function updateButtonState() {
 // 初始化侧边栏
 function initializeSidebar() {
     // 设置按钮点击事件
-    const analyzeBtn = document.getElementById('analyzeBtn');
+    const analyzeBtn = document.getElementById('startAutoAnalyze');
     if (analyzeBtn) {
         analyzeBtn.onclick = () => {
             if (isAutoAnalyzing) {
@@ -78,4 +78,20 @@ if (document.readyState === 'loading') {
 window.onerror = function(msg, url, line, col, error) {
     console.error('Error: ', msg, '\nURL: ', url, '\nLine:', line, '\nColumn:', col, '\nError object:', error);
     return false;
-}; 
+};
+
+// 添加清空缓存按钮事件监听
+document.getElementById('clearCache').addEventListener('click', async () => {
+    try {
+        await chrome.storage.local.clear();
+        console.log('缓存已清空');
+        // 可以添加一个简单的提示
+        const resultDiv = document.getElementById('analysisResult');
+        resultDiv.innerHTML = '<div class="alert alert-success">缓存已清空</div>';
+        setTimeout(() => {
+            resultDiv.innerHTML = '';
+        }, 2000);
+    } catch (error) {
+        console.error('清空缓存失败:', error);
+    }
+}); 
