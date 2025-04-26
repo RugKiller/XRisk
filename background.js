@@ -243,52 +243,104 @@ async function analysisXUser(username, tabId, cachedData) {
             loadingIndicator.remove();
         }
 
-        // 获取各项数据，使用默认值防止错误
-        const tokenCount = Array.isArray(tokensResult) ? tokensResult.length : (tokensResult?.data?.length || 0);
-        const modifications = Array.isArray(modificationsResult) ? modificationsResult : (modificationsResult?.data || []);
-        const deleteTweetCount = modifications.filter(m => m.modify_type === 'delete_tweet').length;
-        const changeNameCount = modifications.filter(m => m.modify_type === 'modify_user_name').length;
-        const changeAvatarCount = modifications.filter(m => m.modify_type === 'modify_profile_image').length;
-        
-        const kolFollow = influenceResult?.kolFollow || {};
-        const kolTokenMention = influenceResult?.kolTokenMention || {};
-        
-        const globalKolCount = kolFollow?.globalKolFollowersCount || 0;
-        const cnKolCount = kolFollow?.cnKolFollowersCount || 0;
-        const topKolCount = kolFollow?.topKolFollowersCount || 0;
-        
-        const day7WinRate = kolTokenMention?.day7?.winRatePct ? (kolTokenMention.day7.winRatePct * 100).toFixed(2) : 'N/A';
-        const day30WinRate = kolTokenMention?.day30?.winRatePct ? (kolTokenMention.day30.winRatePct * 100).toFixed(2) : 'N/A';
-        const day90WinRate = kolTokenMention?.day90?.winRatePct ? (kolTokenMention.day90.winRatePct * 100).toFixed(2) : 'N/A';
+        // 数据处理工具
+        const dataProcessor = {
+            getTokenData(tokensResult) {
+                const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
+                return {
+                    count: tokens.length,
+                    details: tokens.map(token => 
+                        `<span style="color: #ff0000;">${token.token_symbol || 'Unknown'}: ${token.token_address}, 市值: $${parseFloat(token.market_cap).toFixed(2)}</span>`
+                    ).join('\n') || '无发币记录'
+                };
+            },
 
-        // 准备发币详情提示
-        const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
-        const tokenDetails = tokens.map(token => 
-            `<span style="color: #ff0000;">${token.token_symbol || 'Unknown'}: ${token.token_address}, 市值: $${parseFloat(token.market_cap).toFixed(2)}</span>`
-        ).join('\n') || '无发币记录';
+            getModificationData(modificationsResult) {
+                const modifications = Array.isArray(modificationsResult) ? modificationsResult : (modificationsResult?.data || []);
+                return {
+                    deleteTweet: modifications.filter(m => m.modify_type === 'delete_tweet').length,
+                    changeName: modifications.filter(m => m.modify_type === 'modify_user_name').length,
+                    changeAvatar: modifications.filter(m => m.modify_type === 'modify_profile_image').length
+                };
+            },
 
-        console.log('tokenDetails: ', tokenDetails);
-        console.log('开始更新DOM...');
-        targetElement.insertAdjacentHTML('afterend', `<div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;"><div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;"><strong>发币风险分析:</strong> 发币: <span class="token-count" style="color: #ff0000; font-weight: bold; position: relative; cursor: help;">${tokenCount}<div class="tooltip" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); white-space: pre !important; overflow: visible !important; z-index: 9999; width: fit-content; min-width: 600px; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; display: none; font-size: 10px; line-height: 1.2; color: #333; border: 1px solid #e1e8ed;">${tokenDetails}</div></span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
-<strong>影响力分析:</strong> 顶级KOL关注: <span style="color: #ff0000; font-weight: bold;">${topKolCount}</span>, 全球KOL关注: <span style="color: #ff0000; font-weight: bold;">${globalKolCount}</span>, 中文区KOL关注: <span style="color: #ff0000; font-weight: bold;">${cnKolCount}</span>
-<strong>胜率分析:</strong> 7天胜率: <span style="color: #ff0000; font-weight: bold;">${day7WinRate}%</span>, 30天胜率: <span style="color: #ff0000; font-weight: bold;">${day30WinRate}%</span>, 90天胜率: <span style="color: #ff0000; font-weight: bold;">${day90WinRate}%</span></div></div>`);
+            getInfluenceData(influenceResult) {
+                const kolFollow = influenceResult?.kolFollow || {};
+                const kolTokenMention = influenceResult?.kolTokenMention || {};
+                
+                return {
+                    kol: {
+                        global: kolFollow?.globalKolFollowersCount || 0,
+                        cn: kolFollow?.cnKolFollowersCount || 0,
+                        top: kolFollow?.topKolFollowersCount || 0
+                    },
+                    winRate: {
+                        day7: kolTokenMention?.day7?.winRatePct ? (kolTokenMention.day7.winRatePct * 100).toFixed(2) : 'N/A',
+                        day30: kolTokenMention?.day30?.winRatePct ? (kolTokenMention.day30.winRatePct * 100).toFixed(2) : 'N/A',
+                        day90: kolTokenMention?.day90?.winRatePct ? (kolTokenMention.day90.winRatePct * 100).toFixed(2) : 'N/A'
+                    }
+                };
+            }
+        };
 
-        // 添加tooltip显示/隐藏逻辑
+        // 样式配置
+        const styles = {
+            container: 'font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;',
+            content: 'padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;',
+            tooltip: `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                white-space: pre !important;
+                overflow: visible !important;
+                z-index: 9999;
+                width: fit-content;
+                min-width: 600px;
+                user-select: text;
+                -webkit-user-select: text;
+                -moz-user-select: text;
+                -ms-user-select: text;
+                display: none;
+                font-size: 10px;
+                line-height: 1.2;
+                color: #333;
+                border: 1px solid #e1e8ed;
+            `,
+            highlight: 'color: #ff0000; font-weight: bold;'
+        };
+
+        // 处理数据
+        const tokenData = dataProcessor.getTokenData(tokensResult);
+        const modificationData = dataProcessor.getModificationData(modificationsResult);
+        const influenceData = dataProcessor.getInfluenceData(influenceResult);
+
+        // 构建HTML
+        const analysisHTML = `
+            <div class="pumptools-analysis-result" style="${styles.container}">
+                <div style="${styles.content}"><strong>发币风险分析:</strong> 发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span style="${styles.highlight}">${modificationData.deleteTweet}</span>次, 改名: <span style="${styles.highlight}">${modificationData.changeName}</span>次, 改头像: <span style="${styles.highlight}">${modificationData.changeAvatar}</span>次
+                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="${styles.highlight}">${influenceData.kol.top}</span>, 全球KOL关注: <span style="${styles.highlight}">${influenceData.kol.global}</span>, 中文区KOL关注: <span style="${styles.highlight}">${influenceData.kol.cn}</span>
+                    <strong>胜率分析:</strong> 7天胜率: <span style="${styles.highlight}">${influenceData.winRate.day7}%</span>, 30天胜率: <span style="${styles.highlight}">${influenceData.winRate.day30}%</span>, 90天胜率: <span style="${styles.highlight}">${influenceData.winRate.day90}%</span>
+                </div>
+            </div>
+        `;
+
+        // 插入HTML
+        targetElement.insertAdjacentHTML('afterend', analysisHTML);
+
+        // 设置tooltip事件
         const tokenCountSpan = document.querySelector('.token-count');
         if (tokenCountSpan) {
             const tooltip = tokenCountSpan.querySelector('.tooltip');
             
-            // 显示tooltip
             tokenCountSpan.addEventListener('mouseenter', () => {
                 tooltip.style.display = 'block';
             });
             
-            // 隐藏tooltip
-            tokenCountSpan.addEventListener('mouseleave', () => {
-                // 不立即隐藏，等待鼠标移动到tooltip上
-            });
-            
-            // tooltip的鼠标事件
             tooltip.addEventListener('mouseenter', () => {
                 tooltip.style.display = 'block';
             });
@@ -297,8 +349,6 @@ async function analysisXUser(username, tabId, cachedData) {
                 tooltip.style.display = 'none';
             });
         }
-
-        console.log('新增内容已添加');
     }
 
     // 主流程
