@@ -264,14 +264,40 @@ async function analysisXUser(username, tabId, cachedData) {
         // 准备发币详情提示
         const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
         const tokenDetails = tokens.map(token => 
-            `${token.token_symbol || 'Unknown'}: ${token.token_address}\n市值: $${parseFloat(token.market_cap).toFixed(2)}`
-        ).join('\n\n') || '无发币记录';
+            `<span style="color: #ff0000;">${token.token_symbol || 'Unknown'}: ${token.token_address}, 市值: $${parseFloat(token.market_cap).toFixed(2)}</span>`
+        ).join('\n') || '无发币记录';
 
         console.log('tokenDetails: ', tokenDetails);
         console.log('开始更新DOM...');
-        targetElement.insertAdjacentHTML('afterend', `<div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;"><div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;"><strong>发币风险分析:</strong> 发币: <span style="color: #ff0000; font-weight: bold; cursor: help;" title="${tokenDetails.replace(/\n/g, '&#10;')}">${tokenCount}</span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
+        targetElement.insertAdjacentHTML('afterend', `<div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;"><div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;"><strong>发币风险分析:</strong> 发币: <span class="token-count" style="color: #ff0000; font-weight: bold; position: relative; cursor: help;">${tokenCount}<div class="tooltip" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 4px 8px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); white-space: pre !important; overflow: visible !important; z-index: 9999; width: fit-content; min-width: 600px; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text; display: none; font-size: 10px; line-height: 1.2; color: #333; border: 1px solid #e1e8ed;">${tokenDetails}</div></span>个, 删推: <span style="color: #ff0000; font-weight: bold;">${deleteTweetCount}</span>次, 改名: <span style="color: #ff0000; font-weight: bold;">${changeNameCount}</span>次, 改头像: <span style="color: #ff0000; font-weight: bold;">${changeAvatarCount}</span>次
 <strong>影响力分析:</strong> 顶级KOL关注: <span style="color: #ff0000; font-weight: bold;">${topKolCount}</span>, 全球KOL关注: <span style="color: #ff0000; font-weight: bold;">${globalKolCount}</span>, 中文区KOL关注: <span style="color: #ff0000; font-weight: bold;">${cnKolCount}</span>
 <strong>胜率分析:</strong> 7天胜率: <span style="color: #ff0000; font-weight: bold;">${day7WinRate}%</span>, 30天胜率: <span style="color: #ff0000; font-weight: bold;">${day30WinRate}%</span>, 90天胜率: <span style="color: #ff0000; font-weight: bold;">${day90WinRate}%</span></div></div>`);
+
+        // 添加tooltip显示/隐藏逻辑
+        const tokenCountSpan = document.querySelector('.token-count');
+        if (tokenCountSpan) {
+            const tooltip = tokenCountSpan.querySelector('.tooltip');
+            
+            // 显示tooltip
+            tokenCountSpan.addEventListener('mouseenter', () => {
+                tooltip.style.display = 'block';
+            });
+            
+            // 隐藏tooltip
+            tokenCountSpan.addEventListener('mouseleave', () => {
+                // 不立即隐藏，等待鼠标移动到tooltip上
+            });
+            
+            // tooltip的鼠标事件
+            tooltip.addEventListener('mouseenter', () => {
+                tooltip.style.display = 'block';
+            });
+            
+            tooltip.addEventListener('mouseleave', () => {
+                tooltip.style.display = 'none';
+            });
+        }
+
         console.log('新增内容已添加');
     }
 
