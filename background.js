@@ -1,5 +1,44 @@
 console.log('Background script loaded');
 
+// 缓存相关工具函数
+async function getCachedAnalysis(username) {
+    try {
+        const result = await chrome.storage.local.get(username);
+        if (!result[username]) {
+            return null;
+        }
+        
+        const cachedData = result[username];
+        const cacheTime = cachedData.timestamp;
+        const now = Date.now();
+        
+        // 缓存有效期为10分钟
+        if (now - cacheTime >  10 * 60 * 1000) {
+            // 缓存过期，删除
+            await chrome.storage.local.remove(username);
+            return null;
+        }
+        
+        return cachedData.data;
+    } catch (error) {
+        console.error('读取缓存失败:', error);
+        return null;
+    }
+}
+
+async function setCachedAnalysis(username, data) {
+    try {
+        const cacheData = {
+            timestamp: Date.now(),
+            data: data
+        };
+        await chrome.storage.local.set({ [username]: cacheData });
+        console.log('缓存写入成功');
+    } catch (error) {
+        console.error('缓存写入失败:', error);
+    }
+}
+
 // 特殊页面黑名单
 const SPECIAL_PAGES = [
     'home',
@@ -60,6 +99,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
     } else if (message.action === 'stopAutoAnalyze') {
         console.log('收到停止自动分析的消息');
+    } else if (message.action === 'saveCache') {
+        console.log('收到保存缓存请求');
+        setCachedAnalysis(message.username, message.data);
     }
 });
 
@@ -67,7 +109,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === 'complete' && tab.url) {
         // 检查是否开启了自动分析
-        chrome.storage.local.get('isAutoAnalyzing', (result) => {
+        chrome.storage.local.get('isAutoAnalyzing', async (result) => {
             if (result.isAutoAnalyzing) {
                 // 检查URL是否是用户主页
                 const urlObj = new URL(tab.url);
@@ -77,12 +119,26 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
                     pathParts.length === 2 && pathParts[1] && !SPECIAL_PAGES.includes(pathParts[1])) {
                     console.log('检测到用户主页，触发分析...');
                     const username = pathParts[1];
-                    // 注入分析脚本
-                    chrome.scripting.executeScript({
-                        target: { tabId: tabId },
-                        func: analysisXUser,
-                        args: [username, tabId]
-                    });
+
+                    // 先检查缓存
+                    const cachedData = await getCachedAnalysis(username);
+                    if (cachedData) {
+                        console.log('找到缓存数据，直接使用');
+                        // 注入分析脚本，使用缓存数据
+                        chrome.scripting.executeScript({
+                            target: { tabId: tabId },
+                            func: analysisXUser,
+                            args: [username, tabId, cachedData]
+                        });
+                    } else {
+                        console.log('无缓存数据，执行完整分析');
+                        // 注入分析脚本
+                        chrome.scripting.executeScript({
+                            target: { tabId: tabId },
+                            func: analysisXUser,
+                            args: [username, tabId]
+                        });
+                    }
                 }
             }
         });
@@ -90,7 +146,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 });
 
 // 分析函数
-async function analysisXUser(username, tabId) {
+async function analysisXUser(username, tabId, cachedData) {
     console.log('==== 开始分析用户 ====');
     console.log('用户名:', username);
 
@@ -226,22 +282,41 @@ async function analysisXUser(username, tabId) {
 
     showLoading(targetElement);
 
-    const twitterUrl = `https://x.com/${username}`;
-    const payload = { twitter_url: twitterUrl };
-    
-    // 并行调用三个接口
-    const [tokensResult, modificationsResult, influenceResult] = await Promise.all([
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史').catch(() => ({ data: [] })),
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史').catch(() => ({ data: [] })),
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据').catch(() => ({ 
-            kolFollow: { globalKolFollowersCount: 0, cnKolFollowersCount: 0, topKolFollowersCount: 0 },
-            kolTokenMention: { 
-                day7: { winRatePct: null },
-                day30: { winRatePct: null },
-                day90: { winRatePct: null }
+    let tokensResult, modificationsResult, influenceResult;
+
+    if (cachedData) {
+        console.log('使用缓存数据');
+        ({tokensResult, modificationsResult, influenceResult} = cachedData);
+    } else {
+        console.log('执行完整分析');
+        const twitterUrl = `https://x.com/${username}`;
+        const payload = { twitter_url: twitterUrl };
+        
+        // 并行调用三个接口
+        [tokensResult, modificationsResult, influenceResult] = await Promise.all([
+            makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史').catch(() => ({ data: [] })),
+            makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史').catch(() => ({ data: [] })),
+            makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据').catch(() => ({ 
+                kolFollow: { globalKolFollowersCount: 0, cnKolFollowersCount: 0, topKolFollowersCount: 0 },
+                kolTokenMention: { 
+                    day7: { winRatePct: null },
+                    day30: { winRatePct: null },
+                    day90: { winRatePct: null }
+                }
+            }))
+        ]);
+
+        // 发送消息给后台脚本保存缓存
+        chrome.runtime.sendMessage({
+            action: 'saveCache',
+            username,
+            data: {
+                tokensResult,
+                modificationsResult,
+                influenceResult
             }
-        }))
-    ]);
+        });
+    }
 
     updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult);
     console.log('==== 分析完成 ====');
