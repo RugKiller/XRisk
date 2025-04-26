@@ -94,7 +94,7 @@ async function analysisXUser(username, tabId) {
     console.log('==== 开始分析用户 ====');
     console.log('用户名:', username);
 
-    // 在函数内部定义所需的配置和函数
+    // API配置
     const API_CONFIG = {
         PUMP_TOOLS: {
             BASE_URL: 'https://pumptools.me/api/extension',
@@ -106,6 +106,40 @@ async function analysisXUser(username, tabId) {
         }
     };
 
+    // 查找目标DOM元素
+    async function findTargetElement() {
+        const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div/div[2]/div[1]/div/div/div[2]';
+        let targetElement = null;
+        let retryCount = 0;
+        const maxRetries = 5;
+        
+        while (!targetElement && retryCount < maxRetries) {
+            console.log(`尝试查找DOM元素，第${retryCount + 1}次...`);
+            const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
+            targetElement = result.singleNodeValue;
+            if (!targetElement) {
+                retryCount++;
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+        }
+        return targetElement;
+    }
+
+    // 显示加载状态
+    function showLoading(targetElement) {
+        // 清除之前的分析结果
+        const existingResults = document.querySelectorAll('.pumptools-analysis-result');
+        existingResults.forEach(element => element.remove());
+
+        // 添加加载提示
+        targetElement.insertAdjacentHTML('afterend', `
+            <div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;">
+                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px;">加载中...</div>
+            </div>
+        `);
+    }
+
+    // API请求函数
     async function makeRequest(endpoint, payload, description) {
         try {
             const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
@@ -114,9 +148,7 @@ async function analysisXUser(username, tabId) {
             console.log('开始fetch请求...');
             const response = await fetch(url, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
             console.log('fetch请求完成，状态:', response.status);
@@ -140,11 +172,6 @@ async function analysisXUser(username, tabId) {
             return result;
         } catch (error) {
             console.error(`${description}请求出错:`, error);
-            console.error('错误详情:', {
-                name: error.name,
-                message: error.message,
-                stack: error.stack
-            });
             if (error.message === 'NeedVip') {
                 throw error;
             }
@@ -152,66 +179,8 @@ async function analysisXUser(username, tabId) {
         }
     }
 
-    // 构造Twitter URL
-    const twitterUrl = `https://x.com/${username}`;
-    console.log('构造的URL:', twitterUrl);
-    const payload = { twitter_url: twitterUrl };
-    console.log('请求参数:', payload);
-
-    console.log('准备并行调用API...');
-    
-    // 先显示加载状态
-    const xpath = '//*[@id="react-root"]/div/div/div[2]/main/div/div/div/div[1]/div/div[3]/div/div/div[1]/div/div[2]/div[1]/div/div/div[2]';
-    
-    // 添加重试机制查找DOM元素
-    let targetElement = null;
-    let retryCount = 0;
-    const maxRetries = 5;
-    
-    while (!targetElement && retryCount < maxRetries) {
-        console.log(`尝试查找DOM元素，第${retryCount + 1}次...`);
-        const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
-        targetElement = result.singleNodeValue;
-        if (!targetElement) {
-            retryCount++;
-            await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒后重试
-        }
-    }
-    
-    console.log('找到的DOM元素:', targetElement);
-    
-    if (targetElement) {
-        // 清除之前的分析结果
-        const existingResults = document.querySelectorAll('.pumptools-analysis-result');
-        existingResults.forEach(element => element.remove());
-
-        // 添加加载提示
-        targetElement.insertAdjacentHTML('afterend', `
-            <div class="pumptools-analysis-result" style="font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;">
-                <div style="padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px;">加载中...</div>
-            </div>
-        `);
-    }
-
-    // 并行调用三个接口
-    const [tokensResult, modificationsResult, influenceResult] = await Promise.all([
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史').catch(() => ({ data: [] })),
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史').catch(() => ({ data: [] })),
-        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据').catch(() => ({ 
-            kolFollow: { globalKolFollowersCount: 0, cnKolFollowersCount: 0, topKolFollowersCount: 0 },
-            kolTokenMention: { 
-                day7: { winRatePct: null },
-                day30: { winRatePct: null },
-                day90: { winRatePct: null }
-            }
-        }))
-    ]);
-    
-    console.log('发币历史数据:', tokensResult);
-    console.log('异常修改历史数据:', modificationsResult);
-    console.log('用户影响力数据:', influenceResult);
-
-    if (targetElement) {
+    // 处理分析结果并更新UI
+    function updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult) {
         // 移除加载提示
         const loadingIndicator = document.querySelector('.pumptools-analysis-result');
         if (loadingIndicator) {
@@ -219,10 +188,10 @@ async function analysisXUser(username, tabId) {
         }
 
         // 获取各项数据，使用默认值防止错误
-        const tokenCount = tokensResult?.length || 0;
-        const deleteTweetCount = modificationsResult?.filter?.(m => m.modify_type === 'delete_tweet')?.length || 0;
-        const changeNameCount = modificationsResult?.filter?.(m => m.modify_type === 'modify_user_name')?.length || 0;
-        const changeAvatarCount = modificationsResult?.filter?.(m => m.modify_type === 'modify_profile_image')?.length || 0;
+        const tokenCount = tokensResult?.data?.length || 0;
+        const deleteTweetCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'delete_tweet')?.length || 0;
+        const changeNameCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'modify_user_name')?.length || 0;
+        const changeAvatarCount = modificationsResult?.data?.filter?.(m => m.modify_type === 'modify_profile_image')?.length || 0;
         
         const kolFollow = influenceResult?.kolFollow || {};
         const kolTokenMention = influenceResult?.kolTokenMention || {};
@@ -246,9 +215,34 @@ async function analysisXUser(username, tabId) {
             </div>
         `);
         console.log('新增内容已添加');
-    } else {
-        console.warn('未找到目标DOM元素');
     }
 
+    // 主流程
+    const targetElement = await findTargetElement();
+    if (!targetElement) {
+        console.warn('未找到目标DOM元素');
+        return;
+    }
+
+    showLoading(targetElement);
+
+    const twitterUrl = `https://x.com/${username}`;
+    const payload = { twitter_url: twitterUrl };
+    
+    // 并行调用三个接口
+    const [tokensResult, modificationsResult, influenceResult] = await Promise.all([
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史').catch(() => ({ data: [] })),
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史').catch(() => ({ data: [] })),
+        makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据').catch(() => ({ 
+            kolFollow: { globalKolFollowersCount: 0, cnKolFollowersCount: 0, topKolFollowersCount: 0 },
+            kolTokenMention: { 
+                day7: { winRatePct: null },
+                day30: { winRatePct: null },
+                day90: { winRatePct: null }
+            }
+        }))
+    ]);
+
+    updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult);
     console.log('==== 分析完成 ====');
 } 
