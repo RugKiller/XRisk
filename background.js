@@ -249,18 +249,55 @@ async function analysisXUser(username, tabId, cachedData) {
                 const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
                 return {
                     count: tokens.length,
-                    details: tokens.map(token => 
-                        `<span style="color: #ff0000;">${token.token_symbol || 'Unknown'}: ${token.token_address}, 市值: $${parseFloat(token.market_cap).toFixed(2)}</span>`
-                    ).join('\n') || '无发币记录'
+                    details: tokens.length > 0 ? 
+                        `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">发币记录</div>` +
+                        tokens.map(token => 
+                            `<div style="color: #ff0000; padding: 2px 0;">${token.token_symbol || 'Unknown'}: ${token.token_address} (市值: $${parseFloat(token.market_cap).toFixed(2)})</div>`
+                        ).slice(0, 3).join('') : '无发币记录'
                 };
             },
 
             getModificationData(modificationsResult) {
                 const modifications = Array.isArray(modificationsResult) ? modificationsResult : (modificationsResult?.data || []);
+                const getDetails = (type) => {
+                    return modifications
+                        .filter(m => m.modify_type === type)
+                        .slice(0, 3)
+                        .map(m => {
+                            const date = new Date(m.gmt_modify).toLocaleString('zh-CN', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            
+                            let detail = '';
+                            if (type === 'modify_user_name' || type === 'modify_show_name') {
+                                const matches = m.modification_log.match(/Raw Value:<\/br>(.*?)<\/br>.*?New Value:<\/br>(.*?)(?:<\/br>|$)/s);
+                                if (matches) {
+                                    detail = `${matches[1]} → ${matches[2]}`;
+                                }
+                            } else if (type === 'delete_tweet') {
+                                const match = m.modification_log.match(/Delete Tweet:<\/br>(.*?)(?:<\/br>|$)/);
+                                if (match) {
+                                    detail = match[1];
+                                }
+                            }
+                            
+                            return `<div style="color: #ff0000; padding: 2px 0;">${date}: ${detail}</div>`;
+                        })
+                        .join('') || '无记录';
+                };
+                
                 return {
-                    deleteTweet: modifications.filter(m => m.modify_type === 'delete_tweet').length,
-                    changeName: modifications.filter(m => m.modify_type === 'modify_user_name').length,
-                    changeAvatar: modifications.filter(m => m.modify_type === 'modify_profile_image').length
+                    deleteTweet: {
+                        count: modifications.filter(m => m.modify_type === 'delete_tweet').length,
+                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">删推记录</div>` + getDetails('delete_tweet')
+                    },
+                    changeName: {
+                        count: modifications.filter(m => m.modify_type === 'modify_user_name').length,
+                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">改名记录</div>` + getDetails('modify_user_name')
+                    }
                 };
             },
 
@@ -288,28 +325,28 @@ async function analysisXUser(username, tabId, cachedData) {
             container: 'font-size: 12px; color: #536471; line-height: 1.3; margin-top: 4px;',
             content: 'padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;',
             tooltip: `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
+                position: absolute;
                 background: white;
-                padding: 4px 8px;
+                padding: 8px 12px;
                 border-radius: 4px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
                 white-space: pre !important;
                 overflow: visible !important;
                 z-index: 9999;
                 width: fit-content;
-                min-width: 600px;
+                min-width: 300px;
                 user-select: text;
                 -webkit-user-select: text;
                 -moz-user-select: text;
                 -ms-user-select: text;
                 display: none;
-                font-size: 10px;
-                line-height: 1.2;
+                font-size: 12px;
+                line-height: 1.4;
                 color: #333;
                 border: 1px solid #e1e8ed;
+                left: calc(100% + 10px);
+                top: 50%;
+                transform: translateY(-50%);
             `,
             highlight: 'color: #ff0000; font-weight: bold;'
         };
@@ -322,9 +359,17 @@ async function analysisXUser(username, tabId, cachedData) {
         // 构建HTML
         const analysisHTML = `
             <div class="pumptools-analysis-result" style="${styles.container}">
-                <div style="${styles.content}"><strong>发币风险分析:</strong> 发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span style="${styles.highlight}">${modificationData.deleteTweet}</span>次, 改名: <span style="${styles.highlight}">${modificationData.changeName}</span>次, 改头像: <span style="${styles.highlight}">${modificationData.changeAvatar}</span>次
-                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="${styles.highlight}">${influenceData.kol.top}</span>, 全球KOL关注: <span style="${styles.highlight}">${influenceData.kol.global}</span>, 中文区KOL关注: <span style="${styles.highlight}">${influenceData.kol.cn}</span>
-                    <strong>胜率分析:</strong> 7天胜率: <span style="${styles.highlight}">${influenceData.winRate.day7}%</span>, 30天胜率: <span style="${styles.highlight}">${influenceData.winRate.day30}%</span>, 90天胜率: <span style="${styles.highlight}">${influenceData.winRate.day90}%</span>
+                <div style="${styles.content}">
+                    <strong>发币风险分析:</strong> 
+                    发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 
+                    删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 
+                    改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
+                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="${styles.highlight}">${influenceData.kol.top}</span>, 
+                    全球KOL关注: <span style="${styles.highlight}">${influenceData.kol.global}</span>, 
+                    中文区KOL关注: <span style="${styles.highlight}">${influenceData.kol.cn}</span>
+                    <strong>胜率分析:</strong> 7天胜率: <span style="${styles.highlight}">${influenceData.winRate.day7}%</span>, 
+                    30天胜率: <span style="${styles.highlight}">${influenceData.winRate.day30}%</span>, 
+                    90天胜率: <span style="${styles.highlight}">${influenceData.winRate.day90}%</span>
                 </div>
             </div>
         `;
@@ -333,22 +378,91 @@ async function analysisXUser(username, tabId, cachedData) {
         targetElement.insertAdjacentHTML('afterend', analysisHTML);
 
         // 设置tooltip事件
-        const tokenCountSpan = document.querySelector('.token-count');
-        if (tokenCountSpan) {
-            const tooltip = tokenCountSpan.querySelector('.tooltip');
-            
-            tokenCountSpan.addEventListener('mouseenter', () => {
-                tooltip.style.display = 'block';
-            });
-            
-            tooltip.addEventListener('mouseenter', () => {
-                tooltip.style.display = 'block';
-            });
-            
-            tooltip.addEventListener('mouseleave', () => {
-                tooltip.style.display = 'none';
-            });
-        }
+        const setupTooltip = (className) => {
+            const element = document.querySelector(`.${className}`);
+            if (element) {
+                const tooltip = element.querySelector('.tooltip');
+                let hideTimeout;
+
+                function updateTooltipPosition() {
+                    const rect = element.getBoundingClientRect();
+                    const tooltipRect = tooltip.getBoundingClientRect();
+                    
+                    // 检查右侧空间是否足够
+                    const rightSpace = window.innerWidth - rect.right;
+                    const leftSpace = rect.left;
+                    
+                    if (rightSpace >= tooltipRect.width + 10) {
+                        // 右侧空间足够，显示在右侧
+                        tooltip.style.left = 'calc(100% + 10px)';
+                        tooltip.style.right = 'auto';
+                        tooltip.style.transform = 'translateY(-50%)';
+                    } else if (leftSpace >= tooltipRect.width + 10) {
+                        // 左侧空间足够，显示在左侧
+                        tooltip.style.right = 'calc(100% + 10px)';
+                        tooltip.style.left = 'auto';
+                        tooltip.style.transform = 'translateY(-50%)';
+                    } else {
+                        // 两侧空间都不够，显示在下方
+                        tooltip.style.left = '50%';
+                        tooltip.style.top = '100%';
+                        tooltip.style.transform = 'translateX(-50%)';
+                    }
+                }
+
+                function showTooltip() {
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                    }
+                    document.querySelectorAll('.tooltip').forEach(t => {
+                        if (t !== tooltip) t.style.display = 'none';
+                    });
+                    tooltip.style.display = 'block';
+                    updateTooltipPosition();
+                }
+
+                function hideTooltip() {
+                    hideTimeout = setTimeout(() => {
+                        if (!tooltip.matches(':hover')) {
+                            tooltip.style.display = 'none';
+                        }
+                    }, 1000);
+                }
+
+                // 触发元素的事件
+                element.addEventListener('mouseenter', showTooltip);
+                element.addEventListener('mouseleave', hideTooltip);
+
+                // Tooltip本身的事件
+                tooltip.addEventListener('mouseenter', () => {
+                    if (hideTimeout) {
+                        clearTimeout(hideTimeout);
+                    }
+                    tooltip.style.display = 'block';
+                });
+
+                tooltip.addEventListener('mouseleave', () => {
+                    hideTooltip();
+                });
+
+                // 添加点击事件阻止冒泡
+                tooltip.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+
+                // 添加选择文本事件阻止冒泡
+                tooltip.addEventListener('selectstart', (e) => {
+                    e.stopPropagation();
+                });
+
+                // 监听页面滚动和调整大小事件
+                window.addEventListener('scroll', updateTooltipPosition);
+                window.addEventListener('resize', updateTooltipPosition);
+            }
+        };
+
+        // 为所有需要tooltip的元素设置事件
+        ['token-count', 'delete-tweet-count', 'change-name-count'].forEach(setupTooltip);
     }
 
     // 主流程
