@@ -345,6 +345,8 @@ async function analysisXUser(username, tabId, cachedData) {
                 z-index: 9999;
                 width: fit-content;
                 min-width: 300px;
+                max-width: 90vw;
+                word-break: break-all;
                 user-select: text;
                 -webkit-user-select: text;
                 -moz-user-select: text;
@@ -378,87 +380,79 @@ async function analysisXUser(username, tabId, cachedData) {
         // 插入HTML
         targetElement.insertAdjacentHTML('afterend', analysisHTML);
 
+        // --------- 全局tooltip实现 ---------
+        // 创建全局唯一tooltip节点
+        let globalTooltip = document.getElementById('pumptools-global-tooltip');
+        if (!globalTooltip) {
+            globalTooltip = document.createElement('div');
+            globalTooltip.id = 'pumptools-global-tooltip';
+            globalTooltip.style.position = 'fixed';
+            globalTooltip.style.zIndex = '99999';
+            globalTooltip.style.background = '#fff';
+            globalTooltip.style.backdropFilter = 'none';
+            globalTooltip.style.padding = '8px 12px';
+            globalTooltip.style.borderRadius = '4px';
+            globalTooltip.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            globalTooltip.style.whiteSpace = 'pre';
+            globalTooltip.style.overflow = 'visible';
+            globalTooltip.style.minWidth = '300px';
+            globalTooltip.style.userSelect = 'text';
+            globalTooltip.style.fontSize = '12px';
+            globalTooltip.style.lineHeight = '1.4';
+            globalTooltip.style.color = '#333';
+            globalTooltip.style.border = '1px solid #e1e8ed';
+            globalTooltip.style.display = 'none';
+            globalTooltip.style.pointerEvents = 'auto';
+            document.body.appendChild(globalTooltip);
+        }
+
         // 设置tooltip事件
         const setupTooltip = (className) => {
             const element = document.querySelector(`.${className}`);
             if (element) {
-                const tooltip = element.querySelector('.tooltip');
                 let hideTimeout;
-
-                function updateTooltipPosition() {
-                    const rect = element.getBoundingClientRect();
-                    const tooltipRect = tooltip.getBoundingClientRect();
-                    
-                    // 检查右侧空间是否足够
-                    const rightSpace = window.innerWidth - rect.right;
-                    const leftSpace = rect.left;
-                    
-                    if (rightSpace >= tooltipRect.width + 10) {
-                        // 右侧空间足够，显示在右侧
-                        tooltip.style.left = 'calc(100% + 10px)';
-                        tooltip.style.right = 'auto';
-                        tooltip.style.transform = 'translateY(-50%)';
-                    } else if (leftSpace >= tooltipRect.width + 10) {
-                        // 左侧空间足够，显示在左侧
-                        tooltip.style.right = 'calc(100% + 10px)';
-                        tooltip.style.left = 'auto';
-                        tooltip.style.transform = 'translateY(-50%)';
-                    } else {
-                        // 两侧空间都不够，显示在下方
-                        tooltip.style.left = '50%';
-                        tooltip.style.top = '100%';
-                        tooltip.style.transform = 'translateX(-50%)';
-                    }
-                }
+                // 获取原本的tooltip内容
+                const tooltipContent = element.querySelector('.tooltip')?.innerHTML || '';
 
                 function showTooltip() {
-                    if (hideTimeout) {
-                        clearTimeout(hideTimeout);
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    // 设置内容
+                    globalTooltip.innerHTML = tooltipContent;
+                    globalTooltip.style.display = 'block';
+                    // 定位到目标元素右侧或下方
+                    const rect = element.getBoundingClientRect();
+                    const tooltipRect = globalTooltip.getBoundingClientRect();
+                    let left = rect.right + 10;
+                    let top = rect.top + rect.height / 2 - tooltipRect.height / 2;
+                    // 如果右侧空间不够，显示在左侧
+                    if (left + tooltipRect.width > window.innerWidth) {
+                        left = rect.left - tooltipRect.width - 10;
                     }
-                    document.querySelectorAll('.tooltip').forEach(t => {
-                        if (t !== tooltip) t.style.display = 'none';
-                    });
-                    tooltip.style.display = 'block';
-                    updateTooltipPosition();
+                    // 如果左侧也溢出，贴屏幕左边
+                    if (left < 10) left = 10;
+                    // 如果上方溢出，贴顶部
+                    if (top < 0) top = 10;
+                    // 如果下方溢出，贴底部
+                    if (top + tooltipRect.height > window.innerHeight) {
+                        top = window.innerHeight - tooltipRect.height - 10;
+                    }
+                    globalTooltip.style.left = left + 'px';
+                    globalTooltip.style.top = top + 'px';
                 }
 
                 function hideTooltip() {
                     hideTimeout = setTimeout(() => {
-                        if (!tooltip.matches(':hover')) {
-                            tooltip.style.display = 'none';
-                        }
-                    }, 1000);
+                        globalTooltip.style.display = 'none';
+                    }, 300);
                 }
 
-                // 触发元素的事件
                 element.addEventListener('mouseenter', showTooltip);
                 element.addEventListener('mouseleave', hideTooltip);
-
-                // Tooltip本身的事件
-                tooltip.addEventListener('mouseenter', () => {
-                    if (hideTimeout) {
-                        clearTimeout(hideTimeout);
-                    }
-                    tooltip.style.display = 'block';
+                globalTooltip.addEventListener('mouseenter', () => {
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    globalTooltip.style.display = 'block';
                 });
-
-                tooltip.addEventListener('mouseleave', () => {
-                    hideTooltip();
-                });
-
-                // 添加点击事件阻止冒泡
-                tooltip.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
-
-                // 添加选择文本事件阻止冒泡
-                tooltip.addEventListener('selectstart', (e) => {
-                    e.stopPropagation();
-                });
-
-                // 监听页面滚动和调整大小事件
-                window.addEventListener('scroll', updateTooltipPosition);
-                window.addEventListener('resize', updateTooltipPosition);
+                globalTooltip.addEventListener('mouseleave', hideTooltip);
             }
         };
 
