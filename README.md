@@ -1,7 +1,7 @@
 # 🚀 X 用户分析扩展
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Version-1.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.2-blue" alt="Version">
   <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
   <img src="https://img.shields.io/badge/Chrome-Extension-yellow" alt="Chrome Extension">
 </div>
@@ -12,10 +12,13 @@
 
 <div align="center">
   <a href="https://pumptools.me/">
-    <img src="https://img.shields.io/badge/官网-x-extension.com-blue" alt="官网">
+    <img src="https://img.shields.io/badge/官网-pumptools.me-blue" alt="官网">
   </a>
   <a href="https://x.com/pumptools_me">
-    <img src="https://img.shields.io/badge/X-@x_extension-black" alt="X">
+    <img src="https://img.shields.io/badge/X-@pumptools_me-black" alt="X">
+  </a>
+  <a href="https://t.me/pumptools_me">
+    <img src="https://img.shields.io/badge/Telegram-@pumptools_me-blue" alt="Telegram">
   </a>
 </div>
 
