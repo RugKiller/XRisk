@@ -249,8 +249,7 @@ async function analysisXUser(username, tabId, cachedData) {
                 const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
                 return {
                     count: tokens.length,
-                    details: tokens.length > 0 ? 
-                        `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">发币记录</div>` +
+                    details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">发币记录</div>` + tokens.length > 0 ? 
                         tokens.map(token => 
                             `<div style="color: #ff0000; padding: 2px 0;">${token.token_symbol || 'Unknown'}: ${token.token_address} (市值: $${parseFloat(token.market_cap).toFixed(2)})</div>`
                         ).slice(0, 3).join('') : '无发币记录'
@@ -312,9 +311,9 @@ async function analysisXUser(username, tabId, cachedData) {
                         top: kolFollow?.topKolFollowersCount || 0
                     },
                     winRate: {
-                        day7: kolTokenMention?.day7?.winRatePct ? (kolTokenMention.day7.winRatePct * 100).toFixed(2) : 'N/A',
-                        day30: kolTokenMention?.day30?.winRatePct ? (kolTokenMention.day30.winRatePct * 100).toFixed(2) : 'N/A',
-                        day90: kolTokenMention?.day90?.winRatePct ? (kolTokenMention.day90.winRatePct * 100).toFixed(2) : 'N/A'
+                        day7: kolTokenMention?.day7?.maxProfitAvg ? (kolTokenMention.day7.maxProfitAvg * 100).toFixed(2) : 'N/A',
+                        day30: kolTokenMention?.day30?.maxProfitAvg ? (kolTokenMention.day30.maxProfitAvg * 100).toFixed(2) : 'N/A',
+                        day90: kolTokenMention?.day90?.maxProfitAvg ? (kolTokenMention.day90.maxProfitAvg * 100).toFixed(2) : 'N/A'
                     }
                 };
             }
