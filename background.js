@@ -249,10 +249,10 @@ async function analysisXUser(username, tabId, cachedData) {
                 const tokens = Array.isArray(tokensResult) ? tokensResult : (tokensResult?.data || []);
                 return {
                     count: tokens.length,
-                    details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">发币记录</div>` + tokens.length > 0 ? 
+                    details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">发币记录（最多显示10条）</div>` + (tokens.length > 0 ? 
                         tokens.map(token => 
                             `<div style="color: #ff0000; padding: 2px 0;">${token.token_symbol || 'Unknown'}: ${token.token_address} (市值: $${parseFloat(token.market_cap).toFixed(2)})</div>`
-                        ).slice(0, 3).join('') : '无发币记录'
+                        ).slice(0, 10).join('') : '无发币记录')
                 };
             },
 
@@ -261,7 +261,7 @@ async function analysisXUser(username, tabId, cachedData) {
                 const getDetails = (type) => {
                     return modifications
                         .filter(m => m.modify_type === type)
-                        .slice(0, 3)
+                        .slice(0, 10)
                         .map(m => {
                             const date = new Date(m.gmt_modify).toLocaleString('zh-CN', {
                                 month: '2-digit',
@@ -277,10 +277,7 @@ async function analysisXUser(username, tabId, cachedData) {
                                     detail = `${matches[1]} → ${matches[2]}`;
                                 }
                             } else if (type === 'delete_tweet') {
-                                const match = m.modification_log.match(/Delete Tweet:<\/br>(.*?)(?:<\/br>|$)/);
-                                if (match) {
-                                    detail = match[1];
-                                }
+                                detail = m.modification_log.replace(/^Delete Tweet:<\/br>/, '').trim();
                             }
                             
                             return `<div style="color: #ff0000; padding: 2px 0;">${date}: ${detail}</div>`;
@@ -291,29 +288,42 @@ async function analysisXUser(username, tabId, cachedData) {
                 return {
                     deleteTweet: {
                         count: modifications.filter(m => m.modify_type === 'delete_tweet').length,
-                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">删推记录</div>` + getDetails('delete_tweet')
+                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">删推记录（最多显示10条）</div>` + getDetails('delete_tweet')
                     },
                     changeName: {
                         count: modifications.filter(m => m.modify_type === 'modify_user_name').length,
-                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">改名记录</div>` + getDetails('modify_user_name')
+                        details: `<div style="color: #666; font-size: 11px; margin-bottom: 4px;">改名记录（最多显示10条）</div>` + getDetails('modify_user_name')
                     }
                 };
             },
 
             getInfluenceData(influenceResult) {
                 const kolFollow = influenceResult?.kolFollow || {};
-                const kolTokenMention = influenceResult?.kolTokenMention || {};
-                
+                // 处理KOL列表详情
+                function getKolDetail(list, title) {
+                    if (!Array.isArray(list) || !list.length) return `<span style=\"color: #999;\">无${title}</span>`;
+                    return `<div style=\"color: #666; font-size: 11px; margin-bottom: 4px;\">${title}</div>` +
+                        list.slice(0, 10).map(kol =>
+                            `<div style=\"display: flex; align-items: center; gap: 6px; margin-bottom: 2px;\">
+                                <img src=\"${kol.avatar}\" alt=\"avatar\" style=\"width: 22px; height: 22px; border-radius: 50%; object-fit: cover;\">
+                                <a href=\"https://x.com/${kol.username}\" target=\"_blank\" style=\"color: #4a90e2; text-decoration: none; font-size: 13px;\">${kol.name || kol.username}</a>
+                            </div>`
+                        ).join('');
+                }
                 return {
                     kol: {
-                        global: kolFollow?.globalKolFollowersCount || 0,
-                        cn: kolFollow?.cnKolFollowersCount || 0,
-                        top: kolFollow?.topKolFollowersCount || 0
-                    },
-                    tokenMentions: {
-                        mentions_90d: kolTokenMention?.day90?.tokenMentions || [],
-                        mentions_30d: kolTokenMention?.day30?.tokenMentions || [],
-                        mentions_7d: kolTokenMention?.day7?.tokenMentions || []
+                        global: {
+                            count: kolFollow?.globalKolFollowersCount || 0,
+                            details: getKolDetail(kolFollow?.globalKolFollowers, '全球KOL列表')
+                        },
+                        cn: {
+                            count: kolFollow?.cnKolFollowersCount || 0,
+                            details: getKolDetail(kolFollow?.cnKolFollowers, '中文区KOL列表')
+                        },
+                        top: {
+                            count: kolFollow?.topKolFollowersCount || 0,
+                            details: getKolDetail(kolFollow?.topKolFollowers, '顶级KOL列表')
+                        }
                     }
                 };
             }
@@ -325,7 +335,8 @@ async function analysisXUser(username, tabId, cachedData) {
             content: 'padding: 2px 6px; background-color: #f0f0f0; border-radius: 4px; white-space: pre-line;',
             tooltip: `
                 position: absolute;
-                background: white;
+                background: #fff !important;
+                backdrop-filter: none;
                 padding: 8px 12px;
                 border-radius: 4px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -358,14 +369,8 @@ async function analysisXUser(username, tabId, cachedData) {
         // 构建HTML
         const analysisHTML = `
             <div class="pumptools-analysis-result" style="${styles.container}">
-                <div style="${styles.content}">
-                    <strong>发币风险分析:</strong> 
-                    发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 
-                    删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 
-                    改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
-                    <strong>影响力分析:</strong> 顶级KOL关注: <span style="${styles.highlight}">${influenceData.kol.top}</span>, 
-                    全球KOL关注: <span style="${styles.highlight}">${influenceData.kol.global}</span>, 
-                    中文区KOL关注: <span style="${styles.highlight}">${influenceData.kol.cn}</span>
+                <div style="${styles.content}"><strong>发币风险分析:</strong>发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
+                    <strong>影响力分析:</strong>顶级KOL关注: <span class="top-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.top.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.top.details}</div></span>, 全球KOL关注: <span class="global-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.global.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.global.details}</div></span>, 中文区KOL关注: <span class="cn-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.cn.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.cn.details}</div></span>
                 </div>
             </div>
         `;
@@ -458,7 +463,7 @@ async function analysisXUser(username, tabId, cachedData) {
         };
 
         // 为所有需要tooltip的元素设置事件
-        ['token-count', 'delete-tweet-count', 'change-name-count'].forEach(setupTooltip);
+        ['token-count', 'delete-tweet-count', 'change-name-count', 'top-kol-count', 'global-kol-count', 'cn-kol-count'].forEach(setupTooltip);
     }
 
     // 主流程
