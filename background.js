@@ -13,7 +13,7 @@ async function getCachedAnalysis(username) {
         const now = Date.now();
         
         // 缓存有效期为10分钟
-        if (now - cacheTime >  10 * 60 * 1000) {
+        if (now - cacheTime >  30 * 60 * 1000) {
             // 缓存过期，删除
             await chrome.storage.local.remove(username);
             return null;
