@@ -310,10 +310,10 @@ async function analysisXUser(username, tabId, cachedData) {
                         cn: kolFollow?.cnKolFollowersCount || 0,
                         top: kolFollow?.topKolFollowersCount || 0
                     },
-                    winRate: {
-                        day7: kolTokenMention?.day7?.maxProfitAvg ? (kolTokenMention.day7.maxProfitAvg * 100).toFixed(2) : 'N/A',
-                        day30: kolTokenMention?.day30?.maxProfitAvg ? (kolTokenMention.day30.maxProfitAvg * 100).toFixed(2) : 'N/A',
-                        day90: kolTokenMention?.day90?.maxProfitAvg ? (kolTokenMention.day90.maxProfitAvg * 100).toFixed(2) : 'N/A'
+                    tokenMentions: {
+                        mentions_90d: kolTokenMention?.day90?.tokenMentions || [],
+                        mentions_30d: kolTokenMention?.day30?.tokenMentions || [],
+                        mentions_7d: kolTokenMention?.day7?.tokenMentions || []
                     }
                 };
             }
@@ -366,9 +366,6 @@ async function analysisXUser(username, tabId, cachedData) {
                     <strong>影响力分析:</strong> 顶级KOL关注: <span style="${styles.highlight}">${influenceData.kol.top}</span>, 
                     全球KOL关注: <span style="${styles.highlight}">${influenceData.kol.global}</span>, 
                     中文区KOL关注: <span style="${styles.highlight}">${influenceData.kol.cn}</span>
-                    <strong>胜率分析:</strong> 7天胜率: <span style="${styles.highlight}">${influenceData.winRate.day7}%</span>, 
-                    30天胜率: <span style="${styles.highlight}">${influenceData.winRate.day30}%</span>, 
-                    90天胜率: <span style="${styles.highlight}">${influenceData.winRate.day90}%</span>
                 </div>
             </div>
         `;
