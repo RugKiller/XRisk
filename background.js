@@ -12,7 +12,7 @@ async function getCachedAnalysis(username) {
         const cacheTime = cachedData.timestamp;
         const now = Date.now();
         
-        // 缓存有效期为10分钟
+        // 缓存有效期为30分钟
         if (now - cacheTime >  30 * 60 * 1000) {
             // 缓存过期，删除
             await chrome.storage.local.remove(username);
@@ -175,7 +175,7 @@ async function analysisXUser(username, tabId, cachedData) {
             targetElement = result.singleNodeValue;
             if (!targetElement) {
                 retryCount++;
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
         return targetElement;
@@ -373,6 +373,7 @@ async function analysisXUser(username, tabId, cachedData) {
             <div class="pumptools-analysis-result" style="${styles.container}">
                 <div style="${styles.content}"><strong>发币风险分析:</strong>发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
                     <strong>影响力分析:</strong>顶级KOL关注: <span class="top-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.top.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.top.details}</div></span>, 全球KOL关注: <span class="global-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.global.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.global.details}</div></span>, 中文区KOL关注: <span class="cn-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.cn.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.cn.details}</div></span>
+                    <strong>广告位：有需要的老板联系<a href="https://x.com/pumptools_me" target="_blank" style="color: #1d9bf0; text-decoration: none;">@pumptools_me</a>，免费版时有不稳定，如需VIP版请联系我</strong>
                 </div>
             </div>
         `;
