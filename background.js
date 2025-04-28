@@ -157,7 +157,8 @@ async function analysisXUser(username, tabId, cachedData) {
             ENDPOINTS: {
                 TWITTER_TOKENS: '/get_x_tokens_history',
                 TWITTER_MODIFICATIONS: '/get_x_modification_logs',
-                TWITTER_INFLUENCE: '/get_x_influence'
+                TWITTER_INFLUENCE: '/get_x_influence',
+                XRISK_ADS: '/get_xrisk_ads'
             }
         }
     };
@@ -198,6 +199,12 @@ async function analysisXUser(username, tabId, cachedData) {
     // API请求函数
     async function makeRequest(endpoint, payload, description) {
         try {
+            // // Mock 数据
+            // if (endpoint === API_CONFIG.PUMP_TOOLS.ENDPOINTS.XRISK_ADS) {
+            //     console.log('使用 mock 广告数据');
+            //     return { ads: '🔥 限时优惠：VIP会员8折优惠，联系 @pumptools_me 获取专属折扣码！' };
+            // }
+
             const url = `${API_CONFIG.PUMP_TOOLS.BASE_URL}${endpoint}`;
             console.log(`准备发送${description}请求:`, url, payload);
 
@@ -236,7 +243,7 @@ async function analysisXUser(username, tabId, cachedData) {
     }
 
     // 处理分析结果并更新UI
-    function updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult) {
+    function updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult, adsResult) {
         // 移除加载提示
         const loadingIndicator = document.querySelector('.pumptools-analysis-result');
         if (loadingIndicator) {
@@ -369,14 +376,27 @@ async function analysisXUser(username, tabId, cachedData) {
         const influenceData = dataProcessor.getInfluenceData(influenceResult);
 
         // 构建HTML
-        const analysisHTML = `
+        let analysisHTML;
+        if (adsResult?.ads) {
+            analysisHTML = `
+            <div class="pumptools-analysis-result" style="${styles.container}">
+                <div style="${styles.content}"><strong>发币风险分析:</strong>发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
+                    <strong>影响力分析:</strong>顶级KOL关注: <span class="top-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.top.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.top.details}</div></span>, 全球KOL关注: <span class="global-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.global.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.global.details}</div></span>, 中文区KOL关注: <span class="cn-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.cn.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.cn.details}</div></span>
+                    <strong>广告位：有需要的老板联系<a href="https://x.com/pumptools_me" target="_blank" style="color: #1d9bf0; text-decoration: none;">@pumptools_me</a>，免费版时有不稳定，如需VIP版请联系我</strong>
+                    <div style="margin-top: 8px; padding: 4px 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #1d9bf0;">${adsResult.ads}</div>
+                </div>
+            </div>
+            `;
+        } else {
+            analysisHTML = `
             <div class="pumptools-analysis-result" style="${styles.container}">
                 <div style="${styles.content}"><strong>发币风险分析:</strong>发币: <span class="token-count" style="${styles.highlight}; position: relative; cursor: help;">${tokenData.count}<div class="tooltip" style="${styles.tooltip}">${tokenData.details}</div></span>个, 删推: <span class="delete-tweet-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.deleteTweet.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.deleteTweet.details}</div></span>次, 改名: <span class="change-name-count" style="${styles.highlight}; position: relative; cursor: help;">${modificationData.changeName.count}<div class="tooltip" style="${styles.tooltip}">${modificationData.changeName.details}</div></span>次
                     <strong>影响力分析:</strong>顶级KOL关注: <span class="top-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.top.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.top.details}</div></span>, 全球KOL关注: <span class="global-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.global.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.global.details}</div></span>, 中文区KOL关注: <span class="cn-kol-count" style="${styles.highlight}; position: relative; cursor: help;">${influenceData.kol.cn.count}<div class="tooltip" style="${styles.tooltip}">${influenceData.kol.cn.details}</div></span>
                     <strong>广告位：有需要的老板联系<a href="https://x.com/pumptools_me" target="_blank" style="color: #1d9bf0; text-decoration: none;">@pumptools_me</a>，免费版时有不稳定，如需VIP版请联系我</strong>
                 </div>
             </div>
-        `;
+            `;
+        }
 
         // 插入HTML
         targetElement.insertAdjacentHTML('afterend', analysisHTML);
@@ -470,18 +490,18 @@ async function analysisXUser(username, tabId, cachedData) {
 
     showLoading(targetElement);
 
-    let tokensResult, modificationsResult, influenceResult;
+    let tokensResult, modificationsResult, influenceResult, adsResult;
 
     if (cachedData) {
         console.log('使用缓存数据');
-        ({tokensResult, modificationsResult, influenceResult} = cachedData);
+        ({tokensResult, modificationsResult, influenceResult, adsResult} = cachedData);
     } else {
         console.log('执行完整分析');
         const twitterUrl = `https://x.com/${username}`;
         const payload = { twitter_url: twitterUrl };
         
-        // 并行调用三个接口
-        [tokensResult, modificationsResult, influenceResult] = await Promise.all([
+        // 并行调用四个接口
+        [tokensResult, modificationsResult, influenceResult, adsResult] = await Promise.all([
             makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_TOKENS, payload, '获取发币历史').catch(() => ({ data: [] })),
             makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_MODIFICATIONS, payload, '获取异常修改历史').catch(() => ({ data: [] })),
             makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.TWITTER_INFLUENCE, payload, '获取用户影响力数据').catch(() => ({ 
@@ -491,7 +511,8 @@ async function analysisXUser(username, tabId, cachedData) {
                     day30: { winRatePct: null },
                     day90: { winRatePct: null }
                 }
-            }))
+            })),
+            makeRequest(API_CONFIG.PUMP_TOOLS.ENDPOINTS.XRISK_ADS, payload, '获取广告内容').catch(() => ({ ads: null }))
         ]);
 
         // 发送消息给后台脚本保存缓存
@@ -501,11 +522,12 @@ async function analysisXUser(username, tabId, cachedData) {
             data: {
                 tokensResult,
                 modificationsResult,
-                influenceResult
+                influenceResult,
+                adsResult
             }
         });
     }
 
-    updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult);
+    updateAnalysisResult(targetElement, tokensResult, modificationsResult, influenceResult, adsResult);
     console.log('==== 分析完成 ====');
 } 
