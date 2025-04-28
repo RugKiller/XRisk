@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "XRisk",
   "version": "0.0.1",
-  "description": "分析X/Twitter用户的发币风险、影响力和胜率。提供用户行为分析、发币历史和KOL指标，帮助您做出明智决策。",
+  "description": "分析X/Twitter用户的发币风险、影响力。提供用户行为分析、发币历史和KOL指标，帮助您做出明智决策。",
   "permissions": [
     "scripting",
     "tabs",
